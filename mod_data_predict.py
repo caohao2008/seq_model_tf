@@ -164,7 +164,8 @@ class MyGenerator:
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     batchsize = 3
-    
+    seq_size = 3
+ 
     #prepare data
     #generate 3*float data
     gen1 = MyGenerator(0, 1, "data.txt")
@@ -184,7 +185,7 @@ def test():
     print test_input
     #Here reshape tinputs to shape batchsize*seq_size , so sizeof(tinputs)=batchsize*seq_size
     #Assert sizeof(tinputs)==batchsize*seq_size
-    tinputs, test_input = tf.reshape(tinputs, (batchsize, 3)), tf.reshape(test_input, (batchsize, 3))
+    tinputs, test_input = tf.reshape(tinputs, (batchsize, seq_size)), tf.reshape(test_input, (batchsize, seq_size))
     print tinputs
     print tinputs[0]
     print tf.rank(tinputs) 
@@ -197,9 +198,9 @@ def test():
     
     #prepare model
     #model defination
-    net = LSTM(batchsize, 10)
+    net = LSTM(batchsize, seq_size)
     output = net.build(tinputs)
-    net = LSTM(batchsize, 10)
+    net = LSTM(batchsize, seq_size)
     test_output = net.build(test_input, True)
     #loss function
     loss = tf.reduce_mean(tf.abs(output - tgroundtruth))

@@ -148,37 +148,39 @@ class MyGenerator:
     def next(self):
         while True:
             inputs = np.array([self.datas[self.start],self.datas[self.start],self.datas[self.start] ])
-            output = np.sin(inputs)
-            var = np.cos(inputs)
+            outputs = np.sin(inputs)
             self.start +=  self.steps
-            
+      
             print "start=",self.start
             print "steps=",self.steps
             print "input=",inputs
-            print "output=",output
-            print "var=",var
-            yield inputs.astype(np.float32), output.astype(np.float32), var.astype(np.float32)
-
+            print "onput=",outputs
+            yield inputs.astype(np.float32), outputs.astype(np.float32), outputs.astype(np.float32)
 
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     batchsize = 3
+    #seq size, or can be named outputshape size
     seq_size = 3
  
     #prepare data
-    #generate 3*float data
+    #generate 3*float data,* 3
     gen1 = MyGenerator(0, 1, "data.txt")
     print gen1
-    #generate 3*float data
+    #generate 3*float data,* 3
     gen2 = MyGenerator(0, 1, "testdata.txt")
-    data = tf.data.Dataset.from_generator(gen1.next, (tf.float32, tf.float32, tf.float32))
-    test_data = tf.data.Dataset.from_generator(gen2.next, (tf.float32, tf.float32, tf.float32))
+    #Here parameter2 should be consistent with gen input size
+    data = tf.data.Dataset.from_generator(gen1.next, (tf.float32,tf.float32,tf.float32) )
+    #Here parameter2 should be consistent with gen input size
+    test_data = tf.data.Dataset.from_generator(gen2.next, (tf.float32,tf.float32,tf.float32))
     data = data.batch(batchsize)
     train_data = data.make_one_shot_iterator()
     test_data = test_data.batch(batchsize).make_one_shot_iterator()
     print train_data
     print test_data
+   
+    #Here should match get_next yield data, for example, yield 3 element, return 3 element 
     tinputs, tgroundtruth, _ = train_data.get_next()
     print tinputs
     test_input, test_gt, test_var = test_data.get_next()
@@ -215,7 +217,12 @@ def test():
         for epoch in range(50000):
             sess.run(train_opt)
             if not epoch % 50:
-                src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
+                #src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
+                src = sess.run(test_var)
+                gt = sess.run(test_gt)
+                tf.Print(test_input, [test_input], message="test_input")
+                pred = sess.run(test_output)
+                l = sess.run(loss)
                 print(epoch, '|', l)
                 # update plotting
                 plt.cla()

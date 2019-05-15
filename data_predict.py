@@ -131,6 +131,9 @@ class Generator:
             inputs = np.cos(var + 20) + np.cos(var * 0.1 + 2)
             output = np.sin(inputs)
             self.start += 10 * self.steps
+            print "input=",inputs
+            print "output=",output
+            print "var=",var
             yield inputs.astype(np.float32), output.astype(np.float32), var.astype(np.float32)
 
 
@@ -172,6 +175,11 @@ def test():
     train_opt = tf.train.RMSPropOptimizer(1e-2).minimize(loss)
     gpu_options = tf.GPUOptions(allow_growth=True)
 
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
+       sess.run(tinputs)
+    
+ 
+'''
     #start to train
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
@@ -193,7 +201,7 @@ def test():
                 plt.draw()
                 plt.pause(0.1)
                 # plt.savefig(r'G:\temp\blog\gif\\' + str(epoch) + '.png', dpi=100)
-
+'''
 
 if __name__ == '__main__':
     test()

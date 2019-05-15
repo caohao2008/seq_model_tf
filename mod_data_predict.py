@@ -160,7 +160,7 @@ class MyGenerator:
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 3
+    batchsize = 1
     #seq size, or can be named outputshape size
     seq_size = 3
  
@@ -214,9 +214,9 @@ def test():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(50000):
+        for epoch in range(3):
             sess.run(train_opt)
-            if not epoch % 50:
+            if not epoch % 2:
                 #src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
                 src = sess.run(test_var)
                 gt = sess.run(test_gt)

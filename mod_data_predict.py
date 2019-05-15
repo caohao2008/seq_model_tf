@@ -150,17 +150,18 @@ class MyGenerator:
             inputs = np.array([self.datas[self.start],self.datas[self.start],self.datas[self.start] ])
             outputs = np.sin(inputs)
             self.start +=  self.steps
-      
+     
+            print "filename=",self.filename 
             print "start=",self.start
             print "steps=",self.steps
             print "input=",inputs
-            print "onput=",outputs
+            print "output=",outputs
             yield inputs.astype(np.float32), outputs.astype(np.float32), outputs.astype(np.float32)
 
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 1
+    batchsize = 2
     #seq size, or can be named outputshape size
     seq_size = 3
  
@@ -195,8 +196,8 @@ def test():
     print tf.rank(tinputs[0])   
     
     gpu_options = tf.GPUOptions(allow_growth=True)
-    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
-       sess.run(tinputs)
+    #with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
+    #   sess.run(tinputs)
     
     #prepare model
     #model defination
@@ -214,15 +215,18 @@ def test():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(3):
+        for epoch in range(6):
+            print "epoch = ",epoch
+            print "--------------"
             sess.run(train_opt)
+'''
             if not epoch % 2:
-                #src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
-                src = sess.run(test_var)
-                gt = sess.run(test_gt)
-                tf.Print(test_input, [test_input], message="test_input")
-                pred = sess.run(test_output)
-                l = sess.run(loss)
+                src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
+                #src = sess.run(test_var)
+                #gt = sess.run(test_gt)
+                #tf.Print(test_input, [test_input], message="test_input")
+                #pred = sess.run(test_output)
+                #l = sess.run(loss)
                 print(epoch, '|', l)
                 # update plotting
                 plt.cla()
@@ -236,6 +240,6 @@ def test():
                 plt.draw()
                 plt.pause(0.1)
                 # plt.savefig(r'G:\temp\blog\gif\\' + str(epoch) + '.png', dpi=100)
-
+'''
 if __name__ == '__main__':
     test()

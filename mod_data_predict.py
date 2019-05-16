@@ -181,7 +181,8 @@ def test():
     print train_data
     print test_data
    
-    #Here should match get_next yield data, for example, yield 3 element, return 3 element 
+    #Here should match get_next yield data, for example, yield 3 element, return 3 element
+    #Here input feature and label 
     tinputs, tgroundtruth, _ = train_data.get_next()
     print tinputs
     test_input, test_gt, test_var = test_data.get_next()

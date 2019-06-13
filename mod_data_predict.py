@@ -147,27 +147,27 @@ class MyGenerator:
 
     def next(self):
         while True:
-            inputs = np.array([self.datas[self.start],self.datas[self.start],self.datas[self.start] ])
-            outputs = np.sin(inputs)
-            self.start +=  self.steps
+            inputs = np.array([self.datas[self.start],self.datas[self.start+1],self.datas[self.start+2] ])
+            outputs = np.array([ self.datas[self.start+3],self.datas[self.start+4],self.datas[self.start+5] ])
      
             print "filename=",self.filename 
             print "start=",self.start
             print "steps=",self.steps
             print "input=",inputs
             print "output=",outputs
+            self.start +=  self.steps
             yield inputs.astype(np.float32), outputs.astype(np.float32), outputs.astype(np.float32)
 
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 2
+    batchsize = 1
     #seq size, or can be named outputshape size
     seq_size = 3
  
     #prepare data
     #generate 3*float data,* 3
-    gen1 = MyGenerator(0, 1, "data.txt")
+    gen1 = MyGenerator(0, 8, "data.txt")
     print gen1
     #generate 3*float data,* 3
     gen2 = MyGenerator(0, 1, "testdata.txt")
@@ -216,7 +216,7 @@ def test():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(6):
+        for epoch in range(2):
             print "epoch = ",epoch
             print "--------------"
             sess.run(train_opt)

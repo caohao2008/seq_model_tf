@@ -147,30 +147,30 @@ class MyGenerator:
 
     def next(self):
         while True:
-            inputs = np.array([self.datas[self.start],self.datas[self.start+1],self.datas[self.start+2] ])
-            outputs = np.array([ self.datas[self.start+3],self.datas[self.start+4],self.datas[self.start+5] ])
+            inputs = np.array([self.datas[self.start:self.start+self.steps]])
+            outputs = np.array([ self.datas[self.start+self.steps:self.start+2*self.steps]])
      
-            print "filename=",self.filename 
-            print "start=",self.start
-            print "steps=",self.steps
+        #    print "filename=",self.filename 
+        #    print "start=",self.start
+        #    print "steps=",self.steps
             print "input=",inputs
             print "output=",outputs
-            self.start +=  self.steps
+            self.start +=  2*self.steps
             yield inputs.astype(np.float32), outputs.astype(np.float32), outputs.astype(np.float32)
 
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 1
+    batchsize = 100
     #seq size, or can be named outputshape size
-    seq_size = 3
+    seq_size = 7
  
     #prepare data
     #generate 3*float data,* 3
-    gen1 = MyGenerator(0, 8, "data.txt")
+    gen1 = MyGenerator(0, seq_size, "data.lstm.txt")
     print gen1
     #generate 3*float data,* 3
-    gen2 = MyGenerator(0, 1, "testdata.txt")
+    gen2 = MyGenerator(0, seq_size, "testdata.lstm.txt")
     #Here parameter2 should be consistent with gen input size
     data = tf.data.Dataset.from_generator(gen1.next, (tf.float32,tf.float32,tf.float32) )
     #Here parameter2 should be consistent with gen input size
@@ -207,7 +207,8 @@ def test():
     net = LSTM(batchsize, seq_size)
     test_output = net.build(test_input, True)
     #loss function
-    loss = tf.reduce_mean(tf.abs(output - tgroundtruth))
+    #loss = tf.reduce_mean(tf.abs(output - tgroundtruth))
+    loss = tf.reduce_mean(tf.square(output - tgroundtruth))
     #optimization function
     train_opt = tf.train.RMSPropOptimizer(1e-2).minimize(loss)
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -216,12 +217,11 @@ def test():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(2):
+        for epoch in range(100):
             print "epoch = ",epoch
             print "--------------"
             sess.run(train_opt)
-'''
-            if not epoch % 2:
+            if not epoch % 20:
                 src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
                 #src = sess.run(test_var)
                 #gt = sess.run(test_gt)
@@ -229,6 +229,13 @@ def test():
                 #pred = sess.run(test_output)
                 #l = sess.run(loss)
                 print(epoch, '|', l)
+                print("input")
+                print(src)
+                print("label")
+                print(gt)
+                print("pred")
+                print(pred)
+'''                
                 # update plotting
                 plt.cla()
                 fig.set_size_inches(7, 4)

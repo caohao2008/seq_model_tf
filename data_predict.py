@@ -179,7 +179,6 @@ def test():
        sess.run(tinputs)
     
  
-'''
     #start to train
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
@@ -189,6 +188,7 @@ def test():
             if not epoch % 50:
                 src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
                 print(epoch, '|', l)
+'''
                 # update plotting
                 plt.cla()
                 fig.set_size_inches(7, 4)

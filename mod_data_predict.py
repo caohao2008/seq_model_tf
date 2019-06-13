@@ -156,25 +156,25 @@ class MyGenerator:
             print "input=",inputs
             print "output=",outputs
             self.start +=  2*self.steps
-            yield inputs.astype(np.float32), outputs.astype(np.float32), outputs.astype(np.float32)
+            yield inputs.astype(np.float32), outputs.astype(np.float32)
 
 
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 100
+    batchsize = 30
     #seq size, or can be named outputshape size
     seq_size = 7
  
     #prepare data
     #generate 3*float data,* 3
-    gen1 = MyGenerator(0, seq_size, "data.lstm.txt")
+    gen1 = MyGenerator(0, seq_size, "data.lstm.trim.txt")
     print gen1
     #generate 3*float data,* 3
-    gen2 = MyGenerator(0, seq_size, "testdata.lstm.txt")
+    gen2 = MyGenerator(0, seq_size, "data.lstm.trim.txt")
     #Here parameter2 should be consistent with gen input size
-    data = tf.data.Dataset.from_generator(gen1.next, (tf.float32,tf.float32,tf.float32) )
+    data = tf.data.Dataset.from_generator(gen1.next, (tf.float32,tf.float32) )
     #Here parameter2 should be consistent with gen input size
-    test_data = tf.data.Dataset.from_generator(gen2.next, (tf.float32,tf.float32,tf.float32))
+    test_data = tf.data.Dataset.from_generator(gen2.next, (tf.float32,tf.float32))
     data = data.batch(batchsize)
     train_data = data.make_one_shot_iterator()
     test_data = test_data.batch(batchsize).make_one_shot_iterator()
@@ -183,9 +183,9 @@ def test():
    
     #Here should match get_next yield data, for example, yield 3 element, return 3 element
     #Here input feature and label 
-    tinputs, tgroundtruth, _ = train_data.get_next()
+    tinputs, tgroundtruth = train_data.get_next()
     print tinputs
-    test_input, test_gt, test_var = test_data.get_next()
+    test_input, test_gt = test_data.get_next()
     print test_input
     #Here reshape tinputs to shape batchsize*seq_size , so sizeof(tinputs)=batchsize*seq_size
     #Assert sizeof(tinputs)==batchsize*seq_size
@@ -202,27 +202,30 @@ def test():
     
     #prepare model
     #model defination
+    # input size = seq_size
     net = LSTM(batchsize, seq_size)
     output = net.build(tinputs)
+    #output size = 1, not seq_size
+    #net = LSTM(batchsize, seq_size)
     net = LSTM(batchsize, seq_size)
     test_output = net.build(test_input, True)
     #loss function
     #loss = tf.reduce_mean(tf.abs(output - tgroundtruth))
     loss = tf.reduce_mean(tf.square(output - tgroundtruth))
     #optimization function
-    train_opt = tf.train.RMSPropOptimizer(1e-2).minimize(loss)
+    train_opt = tf.train.AdagradOptimizer(1e-1,0.1).minimize(loss)
     gpu_options = tf.GPUOptions(allow_growth=True)
     
     #start to train
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(100):
+        for epoch in range(1000):
             print "epoch = ",epoch
             print "--------------"
             sess.run(train_opt)
             if not epoch % 20:
-                src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
+                src, gt, pred, l, state = sess.run([test_input, test_gt, test_output, loss, net.state])
                 #src = sess.run(test_var)
                 #gt = sess.run(test_gt)
                 #tf.Print(test_input, [test_input], message="test_input")
@@ -234,20 +237,23 @@ def test():
                 print("label")
                 print(gt)
                 print("pred")
-                print(pred)
-'''                
-                # update plotting
+                print(pred.ravel())
+                print ("stat")
+                print("=====")
+                print(net.state.eval())
+                print("=====")
+    
+               # update plotting
                 plt.cla()
                 fig.set_size_inches(7, 4)
                 plt.title(str(epoch))
                 plt.plot(src.ravel(), gt.ravel(), label='ground truth')
                 plt.plot(src.ravel(), pred.ravel(), label='predicted')
-                plt.ylim((-5, 5))
+                plt.ylim((-10, 10))
                 plt.xlim((src.ravel()[0], src.ravel()[-1]))
                 plt.legend(fontsize=15)
                 plt.draw()
                 plt.pause(0.1)
                 # plt.savefig(r'G:\temp\blog\gif\\' + str(epoch) + '.png', dpi=100)
-'''
 if __name__ == '__main__':
     test()

@@ -33,9 +33,9 @@ class LSTM(RNN):
             output = self._input_add_state(inputs, self.state, name='output')
             self.candidate = tf.multiply(forget, self.candidate) + tf.multiply(inputgate,
                                                                                self._input_add_state(inputs, self.state,
-                                                                                                     #tf.nn.tanh,
+                                                                                                     tf.nn.tanh,
                                                                                                      #tf.nn.sigmoid,
-                         tf.nn.relu,
+                         #tf.nn.relu,
                                                                                                      name='candi'))
             self.state = tf.multiply(output, self.candidate)
         return output
@@ -146,6 +146,9 @@ def MaxMinNormalization(x,Max,Min):
 	x = (x - Min) / (Max - Min);
 	return x;
 
+def argnorm(x,Max,Min):
+    x = (Max-Min)*x+Min
+    return x;
 
 class MyGenerator:
     def __init__(self, start, time_steps,filename):
@@ -160,18 +163,25 @@ class MyGenerator:
                 self.datas.append(float(data))
         self.max = np.max( np.array(self.datas))
         self.min = np.min( np.array(self.datas))
-
+    
+    def getMaxmin(self):
+        return self.max,self.min
+    
     def next(self):
         while True:
-            inputs = sigmoid( np.array( self.datas[self.start:self.start+self.steps]) )
-            outputs = sigmoid( np.array( self.datas[self.start+self.steps:self.start+2*self.steps]) )
+            #inputs = sigmoid( np.array( self.datas[self.start:self.start+self.steps]) )
+            inputs = MaxMinNormalization( np.array( self.datas[self.start:self.start+self.steps]),self.max, self.min)
+            #outputs = sigmoid( np.array( self.datas[self.start+self.steps:self.start+2*self.steps]) )
             #outputs = sigmoid( np.array( self.datas[self.start+self.steps:self.start+self.steps+1]) )
-            outputs = sigmoid( np.array( self.datas[self.start+1:self.start+self.steps+1]) )
+            #outputs = sigmoid( np.array( self.datas[self.start+1:self.start+self.steps+1]) )
+            outputs = MaxMinNormalization( np.array( self.datas[self.start+1:self.start+self.steps+1]),self.max,self.min)
             #outputs = np.sin(inputs)
      
         #    print "filename=",self.filename 
         #    print "start=",self.start
         #    print "steps=",self.steps
+            print "max=",self.max
+            print "min=",self.min
             print "input=",inputs
             print "output=",outputs
             self.start +=  2*self.steps
@@ -187,6 +197,7 @@ def test():
     #generate 3*float data,* 3
     gen1 = MyGenerator(0, seq_size, "data.lstm.trim.txt")
     print gen1
+    max,min = gen1.getMaxmin()
     #generate 3*float data,* 3
     gen2 = MyGenerator(0, seq_size, "data.lstm.trim.txt")
     #Here parameter2 should be consistent with gen input size
@@ -228,7 +239,11 @@ def test():
     test_output = net.build(test_input, True) 
     #loss function
     #loss = tf.reduce_mean(tf.abs(output - tgroundtruth))
-    loss = tf.reduce_mean(tf.square(output - tgroundtruth))
+    #self define loss function
+    loss = tf.reduce_mean(tf.where( 
+       tf.greater(output,tgroundtruth), (output-tgroundtruth), (tgroundtruth-output)*2
+       ))
+    #loss = tf.reduce_mean(tf.square(output - tgroundtruth))
     #optimization function
     train_opt = tf.train.RMSPropOptimizer(1e-2).minimize(loss)
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -251,14 +266,17 @@ def test():
                 print(epoch, '|', l)
                 print("input")
                 print(src.ravel())
-                print(argsigmoid(src.ravel()) )
+                #print(argsigmoid(src.ravel()) )
+                print(argnorm(src.ravel(),max,min) )
                 print("label")
                 print(gt.ravel())
-                print(argsigmoid(gt.ravel()) )
+                #print(argsigmoid(gt.ravel()) )
+                print(argnorm(gt.ravel(),max,min) )
                 print("pred")
                 print(pred.ravel())
-                print(argsigmoid( pred.ravel()) )
-                conv_loss = sess.run(tf.reduce_mean(tf.abs( argsigmoid(gt.ravel())-argsigmoid(pred.ravel()))) )
+                print(argnorm( pred.ravel(),max,min) )
+                #conv_loss = sess.run(tf.reduce_mean(tf.abs( argsigmoid(gt.ravel())-argsigmoid(pred.ravel()))) )
+                conv_loss = sess.run(tf.reduce_mean(tf.abs( argnorm(gt.ravel(),max,min)-argnorm(pred.ravel(),max,min))) )
                 print(conv_loss.ravel())
                 print ("stat")
                 print("=====")

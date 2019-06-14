@@ -188,6 +188,8 @@ def test():
             if not epoch % 50:
                 src, gt, pred, l, state = sess.run([test_var, test_gt, test_output, loss, net.state])
                 print(epoch, '|', l)
+                print(gt.ravel())
+                print(pred.ravel())
 '''
                 # update plotting
                 plt.cla()

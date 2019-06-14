@@ -33,7 +33,9 @@ class LSTM(RNN):
             output = self._input_add_state(inputs, self.state, name='output')
             self.candidate = tf.multiply(forget, self.candidate) + tf.multiply(inputgate,
                                                                                self._input_add_state(inputs, self.state,
-                                                                                                     tf.nn.tanh,
+                                                                                                     #tf.nn.tanh,
+                                                                                                     #tf.nn.sigmoid,
+                         tf.nn.relu,
                                                                                                      name='candi'))
             self.state = tf.multiply(output, self.candidate)
         return output
@@ -133,6 +135,18 @@ class Generator:
             self.start += 10 * self.steps
             yield inputs.astype(np.float32), output.astype(np.float32), var.astype(np.float32)
 
+def sigmoid(x):
+    # TODO: Implement sigmoid function
+    return 1/(1 + np.exp(-x))
+
+def argsigmoid(x):
+    return np.log(x)-np.log(1-np.clip(x,0.0001,0.9999999))
+
+def MaxMinNormalization(x,Max,Min):
+	x = (x - Min) / (Max - Min);
+	return x;
+
+
 class MyGenerator:
     def __init__(self, start, time_steps,filename):
         self.start = start
@@ -144,11 +158,16 @@ class MyGenerator:
             cols = line.split(" ")
             for data in cols:
                 self.datas.append(float(data))
+        self.max = np.max( np.array(self.datas))
+        self.min = np.min( np.array(self.datas))
 
     def next(self):
         while True:
-            inputs = np.array([self.datas[self.start:self.start+self.steps]])
-            outputs = np.array([ self.datas[self.start+self.steps:self.start+2*self.steps]])
+            inputs = sigmoid( np.array( self.datas[self.start:self.start+self.steps]) )
+            outputs = sigmoid( np.array( self.datas[self.start+self.steps:self.start+2*self.steps]) )
+            #outputs = sigmoid( np.array( self.datas[self.start+self.steps:self.start+self.steps+1]) )
+            outputs = sigmoid( np.array( self.datas[self.start+1:self.start+self.steps+1]) )
+            #outputs = np.sin(inputs)
      
         #    print "filename=",self.filename 
         #    print "start=",self.start
@@ -158,10 +177,9 @@ class MyGenerator:
             self.start +=  2*self.steps
             yield inputs.astype(np.float32), outputs.astype(np.float32)
 
-
 def test():
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    batchsize = 30
+    batchsize = 10
     #seq size, or can be named outputshape size
     seq_size = 7
  
@@ -189,7 +207,7 @@ def test():
     print test_input
     #Here reshape tinputs to shape batchsize*seq_size , so sizeof(tinputs)=batchsize*seq_size
     #Assert sizeof(tinputs)==batchsize*seq_size
-    tinputs, test_input = tf.reshape(tinputs, (batchsize, seq_size)), tf.reshape(test_input, (batchsize, seq_size))
+    tinputs, test_input = tf.reshape(tinputs, (batchsize, seq_size)), tf.reshape(test_input, (batchsize, seq_size)) 
     print tinputs
     print tinputs[0]
     print tf.rank(tinputs) 
@@ -206,26 +224,25 @@ def test():
     net = LSTM(batchsize, seq_size)
     output = net.build(tinputs)
     #output size = 1, not seq_size
-    #net = LSTM(batchsize, seq_size)
     net = LSTM(batchsize, seq_size)
-    test_output = net.build(test_input, True)
+    test_output = net.build(test_input, True) 
     #loss function
     #loss = tf.reduce_mean(tf.abs(output - tgroundtruth))
     loss = tf.reduce_mean(tf.square(output - tgroundtruth))
     #optimization function
-    train_opt = tf.train.AdagradOptimizer(1e-1,0.1).minimize(loss)
+    train_opt = tf.train.RMSPropOptimizer(1e-2).minimize(loss)
     gpu_options = tf.GPUOptions(allow_growth=True)
     
     #start to train
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         fig = plt.figure()
-        for epoch in range(1000):
+        for epoch in range(1400):
             print "epoch = ",epoch
             print "--------------"
             sess.run(train_opt)
             if not epoch % 20:
-                src, gt, pred, l, state = sess.run([test_input, test_gt, test_output, loss, net.state])
+                src, gt, pred, l, state = sess.run([test_input, test_gt, test_output, loss, output])
                 #src = sess.run(test_var)
                 #gt = sess.run(test_gt)
                 #tf.Print(test_input, [test_input], message="test_input")
@@ -233,16 +250,21 @@ def test():
                 #l = sess.run(loss)
                 print(epoch, '|', l)
                 print("input")
-                print(src)
+                print(src.ravel())
+                print(argsigmoid(src.ravel()) )
                 print("label")
-                print(gt)
+                print(gt.ravel())
+                print(argsigmoid(gt.ravel()) )
                 print("pred")
                 print(pred.ravel())
+                print(argsigmoid( pred.ravel()) )
+                conv_loss = sess.run(tf.reduce_mean(tf.abs( argsigmoid(gt.ravel())-argsigmoid(pred.ravel()))) )
+                print(conv_loss.ravel())
                 print ("stat")
                 print("=====")
-                print(net.state.eval())
+                print(state.ravel())
                 print("=====")
-    
+'''
                # update plotting
                 plt.cla()
                 fig.set_size_inches(7, 4)
@@ -255,5 +277,7 @@ def test():
                 plt.draw()
                 plt.pause(0.1)
                 # plt.savefig(r'G:\temp\blog\gif\\' + str(epoch) + '.png', dpi=100)
+'''
+
 if __name__ == '__main__':
     test()
